@@ -1,0 +1,57 @@
+{
+	"pages": [
+        {
+		"path": "pages/index/index",
+		"style": {
+			"navigationBarTitleText": "uniapp demo"
+		}
+	},
+    {
+    	"path": "pages/detail/detail",
+    	"style": {
+    		"navigationBarTitleText": "Car Detail"
+    	}
+    },
+	{
+		"path": "pages/addCar/edit",
+		"style": {
+			"navigationBarTitleText": "Add Car"
+		}
+	}
+    ],
+
+	"globalStyle": {
+	
+		"navigationBarTextStyle": "white",
+		"navigationBarTitleText": "uni-app",
+		"navigationBarBackgroundColor": "#007AFF",
+		"backgroundColor": "#FFFFFF"
+	},
+	"tabBar":{
+		"color": "#7A7E83",
+	    "selectedColor": "#444444",
+	    "borderStyle": "black",
+	    "backgroundColor": "#ffffff",
+		"list":[
+			{
+				"pagePath":"pages/index/index",
+				"iconPath":"/static/tab/shouye@2x.png",
+				"selectedIconPath":"/static/tab/tab_icon_home_selected@2x.png",
+				"text":"首页"
+			},
+			{
+				"pagePath":"pages/addCar/edit",
+				"iconPath":"static/tab/fabu-2.png",
+				"selectedIconPath":"static/tab/tab_icon_pub_selected@2x.png",
+				"text":"发布",
+				"selectedColor":"#0b60fa"
+			},
+			{
+				"pagePath":"pages/index/index",
+				"iconPath":"static/tab/wode@2x.png",
+				"selectedIconPath":"static/tab/tab_icon_me_selected@2x.png",
+				"text":"个人中心"
+			}
+		]
+	}
+}
