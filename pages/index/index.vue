@@ -50,7 +50,7 @@
                 }
             }
                 const resq =  await request(params)
-                console.log('resq',resq)
+                // console.log('resq',resq)
      
                 resq.resp_body.listGoodsInfo.forEach((item)=>{
                     let imgList = []
