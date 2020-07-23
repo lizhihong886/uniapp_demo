@@ -37,7 +37,7 @@
 
 <script>
      import {request} from '../../service/request.js'
-      import {getOssUrl} from '../../utils/oss.js'
+      import {getOssUrl} from '../../utils/oss/oss.js'
     export default {
     data() {
     	return {

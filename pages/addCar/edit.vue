@@ -2,20 +2,51 @@
 	  <view class="content">
 	         <view class="row b-b">
 	             <text class="tit">商品名称</text>
-	             <input class="input" type="text" v-model="addressData.name" placeholder="品牌+型号+年份+版本" placeholder-class="placeholder" />
+	             <input class="input" type="text" v-model="formData.sTitle" placeholder="品牌+型号+年份+版本" placeholder-class="placeholder" />
 	         </view>
 			 <view class="row b-b">
 			     <text class="tit">售价</text>
-			     <input class="input" type="text" v-model="addressData.name" placeholder="请输入商品价格" placeholder-class="placeholder" />
+			     <input class="input" type="digit" v-model="formData.iSalePrice" placeholder="请输入商品价格" placeholder-class="placeholder" />
+			 <view class='unit'>( 万元 )</view>
 			 </view>
 	         <view class="row b-b">
 	             <text class="tit">底价</text>
-	             <input class="input" type="text" v-model="addressData.rank" placeholder="车商交易价格" placeholder-class="placeholder" />
-	         </view>
+	             <input class="input" type="digit" v-model="formData.iBasicPrice" placeholder="车商交易价格" placeholder-class="placeholder" />
+	            <view class='unit'>( 万元 )</view>
+			 </view>
 	         <view class="row b-b">
 	             <text class="tit">新车含税价</text>
-	             <input class="input" type="number" v-model="addressData.mobile" placeholder="新车含税价" placeholder-class="placeholder" />
-	         </view>
+	             <input class="input" type="digit" v-model="formData.iRawPrice" placeholder="新车含税价" placeholder-class="placeholder" />
+	         <view class='unit'>( 万元 )</view>
+			 </view>
+<!--			 <view class="uploads">-->
+<!--				 <view class="row b-b">-->
+<!--					 <text class="tit">行驶证</text>-->
+<!--				 </view>-->
+<!--				&lt;!&ndash; 图片上传 &ndash;&gt;-->
+<!--				<view class='upload-image-view'>-->
+<!--					&lt;!&ndash; 标题已经省略 &ndash;&gt;-->
+<!--					&lt;!&ndash; <view class='title'>上传xxxx图片</view> &ndash;&gt;-->
+<!--					<block v-for="(image,index) in licenseImageList" :key="index">-->
+<!--						<view class='image-view'>-->
+<!--							<image :src="image" :data-src="image" @tap="previewLicense"></image>-->
+<!--							<view class='del-btn' :data-index="index" @tap='deleteLicense'>-->
+<!--								<view class='baicha'></view>-->
+<!--							</view>-->
+<!--						</view>-->
+<!--					</block>-->
+<!--					<view class='add-view' v-if="licenseImageList.length < imageLength" @tap="chooseLicense">-->
+<!--						&lt;!&ndash; 十字架 &ndash;&gt;-->
+<!--						<view class="cross">-->
+<!--							<view class="transverse-line"></view>-->
+<!--							<view class="vertical-line"></view>-->
+<!--						</view>-->
+<!--		  -->
+<!--					</view>-->
+<!--					<view class='info'>上传行驶证</view>-->
+<!--				</view>-->
+<!--				&lt;!&ndash; 图片上传 &ndash;&gt;-->
+<!--				</view>-->
 			 <view class="uploads">
 				 <view class="row b-b">
 				     <text class="tit">车辆图片</text>
@@ -55,18 +86,22 @@
 				</view>
 				<!-- 图片上传 -->
 				</view>
-			 
+		  <view class="row b-b">
+			  <text class="tit">行驶里程</text>
+			  <input class="input" type="text" v-model="formData.iCarMileage" placeholder="行驶里程" placeholder-class="placeholder" />
+			  <view class='unit'>( 万公里 )</view>
+		  </view>
 	         <view class="row b-b">
 	             <text class="tit">变速箱</text>
-	             <input class="input" type="text" v-model="addressData.room" placeholder="变速箱" placeholder-class="placeholder" />
+	             <input class="input" type="text" v-model="formData.sGearbox" placeholder="变速箱" placeholder-class="placeholder" />
 	         </view>
 			 <view class="row b-b">
 			     <text class="tit">车辆颜色</text>
-			     <input class="input" type="text" v-model="addressData.room" placeholder="变速箱" placeholder-class="placeholder" />
+			     <input class="input" type="text" v-model="formData.sCarColor" placeholder="车身颜色" placeholder-class="placeholder" />
 			 </view>
 			 <view class="row b-b">
 			     <text class="tit">上牌地</text>
-			     <input class="input" type="text" v-model="addressData.room" placeholder="上牌地" placeholder-class="placeholder" />
+			     <input class="input" type="text" v-model="formData.sBelongAddr" placeholder="上牌地" placeholder-class="placeholder" />
 			 </view>
 			 <view class="row b-b">
 			     <text class="tit">上牌时间</text>
@@ -82,8 +117,13 @@
 </template>
 
 <script>
-	  import {uniCard, uniPagination} from '@dcloudio/uni-ui'
+	  import {uniCard, uniPagination} from '@dcloudio/uni-ui';
+	  import getSts from "../../utils/oss/getSts";
+	  import {getSuffix} from "../../utils/suffix";
+	  import {getOssSecret, ossHost} from "../../utils/oss/conf";
+
 	  const OSS = require('ali-oss');
+	  
 	  var sourceType = [
 	  		['camera'], //拍照
 	  		['album'], //相册
@@ -94,6 +134,8 @@
 	  		['original'], //原图
 	  		['compressed', 'original'] //压缩或原图
 	  	]
+	  var iUid=1
+	  var sToken=''
 	  export default {
 		  
 	          data() {
@@ -101,17 +143,32 @@
 				             format: true
 				         })
 				return {
-						addressData: {
-							name: '',
-							mobile: '',
-							rank: '',
-							room: '',
+						formData: {
+							eCarType: 1,
+							sTitle: '',
+							iSalePrice: '',
+							iBasicPrice: '',
+							sCarColor: '',
+							iCarMileage: '',
+							sCarLocation: '广州',
+							sBusiness: '',
+							sBusinessAddress: '',
+							sContacter: '',
+							sContactPhone: '',
+							iRawPrice:'',  //新车含税价
+							sRegisterDate:'',  //上牌时间
+							sBelongAddr:'广州',  //归属地
+							sDisplacement:'',  //排量
+							sGearbox:'自动',  //变速箱
+							sEmission:'',  //排放标准
 						},
 						date: currentDate,
 						imageList: [], //保存图片路径集合
-						imageLength: 3, //限制图片张数
+						imageLength: 9, //限制图片张数
 						sourceTypeIndex: 2, //添加方式限制
 						sizeTypeIndex: 0, //图片尺寸限制
+						licenseImageList:[],
+						licenseLength:1
 						}
 	                },
 			  onLoad(option) {},
@@ -126,8 +183,9 @@
 			      },
 	          methods: {
 	            confirm() {
-					   let data = this.addressData;
+					   let data = this.formData;
 					   console.log(JSON.stringify(data))
+					   
 	                   },
 			     bindPickerChange: function(e) {
 			               console.log('picker发送选择改变，携带值为', e.target.value)
@@ -161,6 +219,7 @@
 							count: this.imageLength - this.imageList.length,
 							success: (res) => {
 								this.imageList = this.imageList.concat(res.tempFilePaths);
+								console.log("imageList",imageList)
 							}
 						})
 					},
@@ -179,41 +238,585 @@
 						var images = that.imageList;
 						images.splice(index, 1);
 						that.imageList = images;
+				},
+				//选择图片
+				chooseLicense: async function() {
+						uni.chooseImage({
+							sourceType: sourceType[this.sourceTypeIndex],
+							// #ifdef MP-WEIXIN
+							sizeType: sizeType[this.sizeTypeIndex],
+							// #endif
+							count: this.licenseLength - this.licenseImageList.length,
+							success: (res) => {
+								this.licenseImageList = this.licenseImageList.concat(res.tempFilePaths);
+								console.log("this.licenseImageList",this.licenseImageList)
+								uploadLicense(this.licenseImageList)
+							}
+						})
+					},
+					//预览图片
+				previewLicense: function(e) {
+						var current = e.target.dataset.src
+						uni.previewImage({
+							current: current,
+							urls: this.licenseImageList
+						})
+					},
+					//删除图片
+				deleteLicense: function(e) {
+						var index = e.target.dataset.index;
+						var that = this;
+						var images = that.licenseImageList;
+						images.splice(index, 1);
+						that.licenseImageList = images;
 					}
 				
 			}
 	    }
 	  function h5_url_to_blob(url){
-	  				    return new Promise((resolve,reject)=>{
-	  				        var xhr = new XMLHttpRequest();
-	  				        xhr.open( 'GET', url, true);
-	  				        xhr.responseType = 'blob';
-	  				        xhr.onload = function( e) {
-	  				            if(this.status == 200) {
-	  				                var Blob = this.response;
-	  				                // console.log(myBlob)
-	  				                resolve(Blob)
-	  				                // myBlob现在是对象URL指向的blob。 
-	  				            }
-	  				        };
-	  				        xhr.send();
-	  				    })
-	  				}
-	 async function uploadOSS (){
-	  				  let client = new OSS({
-	  				      accessKeyId: sign.AccessKeyId, // 后台的临时签名ID
-	  				      accessKeySecret: sign.AccessKeySecret, // 后台的临时签名密钥
-	  				      stsToken: sign.SecurityToken,
-	  				      endpoint: 'xxxxbeijing.aliyuncs.com/', // 上传后的域名
-	  				      bucket: 'xxx', // OSS仓库名
-	  				  });
-	  				  let curTime = new Date();
-	  				  let year = curTime.getFullYear(),
-	  				      month = curTime.getMonth() + 1,
-	  				      day = curTime.getDate()
-	  				  let dir = 'imgs/' + year + '/' + (month < 10 ? '0' + month : month) + '-' + (day < 10 ? '0' + day : day) + '/'
-	  				  let result = await client.put(dir +'文件名', '通过第五步转换的blob对象');
-	  }	
+		return new Promise((resolve,reject)=>{
+			var xhr = new XMLHttpRequest();
+			xhr.open( 'GET', url, true);
+			xhr.responseType = 'blob';
+			xhr.onload = function( e) {
+				if(this.status == 200) {
+					var Blob = this.response;
+					// console.log(myBlob)
+					resolve(Blob)
+					// myBlob现在是对象URL指向的blob。 
+				}
+			};
+			xhr.send();
+		})
+	}
+	  async function uploadOSS (){
+	    getSts().then(async (sign) => {
+			let client = new OSS({
+			  		  accessKeyId: sign.AccessKeyId, // 后台的临时签名ID
+			  		  accessKeySecret: sign.AccessKeySecret, // 后台的临时签名密钥
+			  		  stsToken: sign.SecurityToken,
+			  		  endpoint: 'oss-cn-shenzhen.aliyuncs.com', // 上传后的域名
+			  		  bucket: 'yunhu-alpha-ad', // OSS仓库名
+			    });
+			let suffix = getSuffix(item.url)
+			const stime = new Date().valueOf()
+			let objName = 'ytt_platform/images/' + iUid + '-' + stime  + '.' + suffix//  uid+时间戳
+			let blob=await h5_url_to_blob(url)
+			objName = objName.split('?')[0]
+			let result = await client.put(objName, blob);
+			console.log("upload result",result)
+	    }
+		)
+	 }
+	  async function uploadLicense (imgList){
+		  getSts().then(async (sign) => {
+			  try{
+			  	  let objNames=[]
+				  imgList.map(async (item,ind)=>{
+					  try{
+						  const {policyBase64, signature} = getOssSecret(result.AccessKeySecret)
+						  let suffix = getSuffix(item)
+						  const stime = new Date().valueOf()
+						  const objName = 'drive_license/' + uid + '-' + stime + '-' + ind + '.' + suffix//  uid+时间戳
+						  objNames.push(objName)
+						  uni.uploadFile({
+							  url: ossHost,
+							  filePath: item.url,//要上传文件资源的路径
+							  name: 'file',//必须填file
+							  formData: {
+								  'key': objName,
+								  'policy': policyBase64,
+								  'OSSAccessKeyId': sign.AccessKeyId,
+								  'success_action_status': '200',
+								  'signature': signature,
+								  'x-oss-security-token': sign.SecurityToken
+							  },
+							  success: function (res) {
+								  index++
+								  if (res.statusCode === 200) {
+									  //  在最后一张图片上传成功的时候发布到后台
+									  if (index === imgList.length) {
+										  // 最后一张
+										  let params = {
+											  // sImage:files[0].url,
+											  sImageObjName: objNames[0],
+										  }
+										  addLicense(params)
+									  }
+								  }
+							  },
+							  fail: function (errMsg) {
+								  index++
+								  console.log('fail', errMsg)
+							  }
+						  })
+
+					  }catch{
+						  console.log("e",e)
+					  }
+
+				  })
+			  }catch(e){
+				  console.log("getSts",e)
+			  }
+		  }
+		  )
+	  }
+	  async function handleSubmit (){
+		let iUid=0;
+		let sToken="";
+		let iCompanyId=0;
+		let data = this.formData;
+	    if (this.imageList.length === 0) {
+		            uni.showToast({
+		                title: '请至少上传一张图片',
+		                icon: 'none',
+		                duration: 1500
+		            })
+		            return;
+		}
+	    if (data.iSalePrice === '') {
+				uni.showToast({
+					title: '请填写商品价格！',
+					icon: 'none',
+					duration: 1500
+				})
+				return;
+		}
+	   if (data.iSalePrice === '') {
+			uni.showToast({
+				title: '请填写商品价格！',
+				icon: 'none',
+				duration: 1500
+			})
+			return;
+		}
+	   if (data.iCarMileage === '' && stepData3.eCarType === 1) {
+		uni.showToast({
+			title: '请填写表显里程！',
+			icon: 'none',
+			duration: 1500
+		})
+		return;
+	   }
+    //  判断价格
+	if (parseFloat(data.iSalePrice)<0||parseFloat(data.iSalePrice)>3000
+		|| parseFloat(data.iBasicPrice)<0||parseFloat(data.iBasicPrice)>3000
+		|| parseFloat(data.iRawPrice)<0||parseFloat(data.iRawPrice)>3000) {
+		uni.showToast({
+			title: '请检查您填写的价格！',
+			icon: 'none',
+			duration: 1500
+		})
+		return;
+	}
+	//  售价不能低于底价
+	if(parseFloat(stepData3.iSalePrice)<parseFloat(stepData3.iBasicPrice)){
+		uni.showToast({
+			title: '售价不能低于底价！',
+			icon: 'none',
+			duration: 1500
+		})
+		return;
+	}
+	 let params = {}
+	let ListDes = []
+	let registerDate = ''
+	let carConfig = stepData2.carType
+	if (data.eCarType === 1) {   //  1是二手车， 2是新车
+		if (data.sCarLocation) {
+			ListDes.push(stepData3.sCarLocation)
+		}
+		// if (values.registerDate) {
+		//     ListDes.push(`${moment(values.registerDate).format('YYYY/MM')}   上牌`)
+		// }
+		if (data.iCarMileage) {
+			ListDes.push(`${data.iCarMileage}万公里`)
+		}
+		registerDate = data.sRegisterDate ? data.sRegisterDate : ''
+		if (data.iSalePrice) {
+			let iPrice = 0
+			try {
+				iPrice = parseFloat(data.iSalePrice) || 0
+				iPrice = iPrice * 10000
+				data.iSalePrice = iPrice
+			} catch (e) {
+			}
+		}
+		if (data.iBasicPrice) {
+			let iPrice = 0
+			try {
+				iPrice = parseFloat(data.iBasicPrice) || 0
+				iPrice = iPrice * 10000
+				data.iBasicPrice = iPrice
+			} catch (e) {
+			}
+		}
+		if (data.iRawPrice) {
+			let iPrice = 0
+			try {
+				iPrice = parseFloat(data.iRawPrice) || 0
+				iPrice = iPrice * 10000
+				data.iRawPrice = iPrice
+			} catch (e) {
+			}
+		}
+		params = {
+			"sTitle": data.sTitle ? data.sTitle : '',
+			"sJsonPart1": JSON.stringify({
+				"key1": {
+					"title": "售价",
+					"value": data.iSalePrice ? Number(stepData3.iSalePrice) : 0,
+					"fieldName": "salePrice"
+				},
+				"key2": {
+					"title": "新车含税价",
+					"value": data.iRawPrice,
+					"fieldName": "rawPrice"
+				},
+				"key3": {
+					"title": "贷款", "value": [
+						{
+							"title": "首付",
+							"value": data.iFirstPay ? parseInt(data.iFirstPay) : 0,
+							"fieldName": "firstPay",
+							"isMoney": 1
+						},
+						{
+							"title": "月供",
+							"value": data.iMonthPay ? parseInt(data.iMonthPay) : 0,
+							"fieldName": "monthPay",
+							"isMoney": 1
+						},
+						{
+							"title": "期数",
+							"value": data.iPeriod ? parseInt(data.iPeriod) : 0,
+							"fieldName": "monthCount",
+							"isMoney": 0
+						}
+					]
+				}
+			}),
+			"sJsonPart2": JSON.stringify([
+				{"title": "公司名", "value": data.sBusiness ? data.sBusiness : '', "fieldName": "sCompany"},
+				{
+					"title": "地址",
+					"value": data.sBusinessAddress ? data.sBusinessAddress : '',
+					"fieldName": "sAddress"
+				},
+				{
+					"title": "联系人",
+					"value": `${data.sContacter}:${data.sContactPhone}`,
+					"fieldName": "slinkMan"
+				}]),
+			"sJsonPart3": JSON.stringify([
+				{
+					"title": "表显里程",
+					"value": data.iCarMileage ? `${data.iCarMileage}万公里` : '',
+					"fieldName": "sMileage"
+				},
+				{"title": "上牌时间", "value": registerDate, "fieldName": "registerDate"},
+				{
+					"title": "上牌地",
+					"value": data.sBelongAddr ? data.sBelongAddr : '',
+					"fieldName": "sBelongAddr"
+				},
+				// {
+				//     "title": "所在地",
+				//     "value": stepData3.sCarLocation ? stepData3.sCarLocation : '',
+				//     "fieldName": "currentAddr"
+				// },
+				{"title": "车身颜色", "value": data.sCarColor ? data.sCarColor : '', "fieldName": "sColor"},
+				{
+					"title": "排放标准",
+					"value": data.sEmission ? data.sEmission : '',
+					"fieldName": "sStandard"
+				},
+				{"title": "变速箱", "value": data.sGearbox ? data.sGearbox : '', "fieldName": "sGearbox"},
+				{
+					"title": "排量",
+					"value": data.sDisplacement ? data.sDisplacement : '',
+					"fieldName": "displacement"
+				}
+			]),
+			"iSalePrice": data.iSalePrice ? Number(data.iSalePrice) : 0,
+			"iBasicPrice": data.iBasicPrice ? Number(data.iBasicPrice) : 0,
+			"sGoodsDesc": JSON.stringify(ListDes),
+			"listObjectName": objNames,
+			"sImgJson": JSON.stringify(stepData1.imgInfoList),
+			"sLinkText": "",
+			// "sGoodsDesc": "",
+			"iGoodsTypeId": 1,
+			"sJsonRawData": JSON.stringify({
+				'iCompanyId': companyId,
+				'sTitle': data.sTitle,
+				'sBrand': data.carType.sBrand,
+				'sYear': data.carType.iYear,
+				'sLine': data.carType.sLine,
+				'sModel': data.carType.sModel,
+				'salePrice': data.iSalePrice ? Number(data.iSalePrice) : 0,
+				'iBasicPrice': Number(data.iBasicPrice),
+				'sCompany': data.sBusiness,
+				'sAddress': data.sBusinessAddress,
+				'slinkMan': data.sContacter,
+				'sPhone': data.sContactPhone,
+				'rawPrice': data.iRawPrice,
+				'carType': data.eCarType,
+				'sMileage': data.iCarMileage,
+				'currentAddr': data.sCarLocation,
+				'sGoodsType': 1,
+				'iGoodsTypeId': 1,
+				'sColor': data.sCarColor,
+				'sDisplacement': data.sDisplacement,
+				'sGearbox': data.sGearbox,
+				'sStandard': data.sEmission,
+				'sBelongAddr': data.sBelongAddr,
+				'sRegisterDate': data.sRegisterDate,
+				iFirstPay: data.iFirstPay ? parseInt(data.iFirstPay) : 0,
+				iPeriod: data.iPeriod ? parseInt(data.iPeriod) : 0,
+				iMonthPay: data.iMonthPay ? parseInt(data.iMonthPay) : 0,
+			}),
+			"eCarType": data.eCarType ? parseInt(data.eCarType) : 1,
+			"iCompanyId": companyId ? companyId : 1,
+			"carConfig": carConfig,
+			//     新增字段
+			sDriLicenseObjName: data.sDriLicenseObjName,
+			bSmartOem: stepData1.value,
+			sCarColor: data.sCarColor,
+			oBusinessInfo: {
+				sBusiness: data.sBusiness,
+				sBusinessAddress: data.sBusinessAddress,
+				sContacter: data.sContacter,
+				sContactPhone: data.sContactPhone,
+			},
+			oDriLicenseInfo: stepData2.licenseInfo,
+			iCarMileage: data.iCarMileage ? parseInt(data.iCarMileage) : 0,
+			sCarLocation: data.sCarLocation,
+
+			//    新增字段
+			iRawPrice: data.iRawPrice ? data.iRawPrice : 0,  //新车含税价
+			sRegisterDate: data.sRegisterDate,  //上牌时间
+			sBelongAddr: data.sBelongAddr,  //归属地
+			sDisplacement: data.sDisplacement,  //排量
+			sGearBox: data.sGearBox,  //变速箱
+			sEmission: data.sEmission,  //排放标准
+			oLoanInfo: {
+				iFirstPay: data.iFirstPay ? parseInt(data.iFirstPay) : 0,
+				iPeriod: data.iPeriod ? parseInt(data.iPeriod) : 0,
+				iMonthPay: data.iMonthPay ? parseInt(data.iMonthPay) : 0,
+			}
+		}
+		const payload = {
+			"svr_name": "MMHC.MmhcGoodsMngSvr",
+			"method_name": "AddCar",
+			"req_body": {
+				iUid: iUid,
+				sToken: sToken,
+				oGoodsInfo: params,
+			}
+		}
+		const dataResp = await request(payload)
+		uni.hideLoading()
+		try {
+			if (dataResp.hasOwnProperty('resp_code') && dataResp.resp_code === 0) {
+				const respBody = dataResp.resp_body
+				if (respBody.eRetCode === 0) {
+					uni.showToast({
+						title: '操作成功',
+						icon: 'none',
+						duration: 1500
+					})
+
+					uni.switchTab({
+						url: `/pages/index/index`
+					});
+				} else {
+					if (respBody.eRetCode === 105) {
+						uni.hideLoading()
+						uni.showToast({
+							title: '文字内容违规',
+							icon: 'none',
+							duration: 1500
+						})
+					} else {
+						uni.hideLoading()
+						uni.showToast({
+							title: '操作失败',
+							icon: 'none',
+							duration: 1500
+						})
+					}
+				}
+			} else {
+				uni.hideLoading()
+				uni.showToast({
+					title: '操作失败',
+					icon: 'none',
+					duration: 1500
+				})
+			}
+		} catch (e) {
+			uni.hideLoading()
+			uni.showToast({
+				title: '操作失败',
+				icon: 'none',
+				duration: 1500
+			})
+			console.log('e', e)
+		}
+	  }
+	  }
+	  // //获取车辆配置信息
+	  // getCarConfig = async (carConfig) => {
+		//   const {iUid:uid} = getUser()
+		//   const payload = {
+		// 	  "svr_name": "AD.AdCarModelLibSvr",
+		// 	  "method_name": "QryCarConfig",
+		// 	  "req_body": {
+		// 		  iUid: uid,
+		// 		  listCarItem: [carConfig],
+		// 		  bSimMatch:true
+		// 	  }
+		//   }
+		//   const dataResp = await request(payload)
+		//   try {
+		// 	  if (dataResp.hasOwnProperty('resp_code') && dataResp.resp_code === 0) {
+		// 		  const respBody = dataResp.resp_body
+		// 		  if (respBody.eRetCode === 0) {
+		// 			  if (respBody.listConfigJson.length > 0) {
+		// 				  let listConfigJson = isJsonString(respBody.listConfigJson[0])?JSON.parse(respBody.listConfigJson[0]):[]
+		// 				  let newListConfigJson = []
+		// 				  let rawPrice = 0
+		// 				  let sGearbox=''
+		// 				  let sEmission=''
+		// 				  let sDisplacement=''
+		// 				  console.log("listConfigJson",listConfigJson)
+		// 				  listConfigJson.map((item) => {
+		// 					  if (item.name !== 'basicParam' && item.name !== 'basicInfo') {
+		// 						  newListConfigJson.push(item)
+		// 					  }
+		// 					  if(item.name === 'basicParam' ){
+		// 						  item.list.map((item1)=>{
+		// 							  if(item1.name==='厂商指导价'){
+		// 								  rawPrice = Number(item1.value.substr(0,item.value.length-1))*10000
+		// 							  }
+		// 						  })
+		// 					  }
+		// 					  if(item.name==='gearbox'){
+		// 						  item.list.map((item1)=>{
+		// 							  if(item1.name==='变速箱类型'){
+		// 								  sGearbox=item1.value
+		// 							  }
+		// 						  })
+		// 					  }
+		// 					  if(item.name==='basicInfo'){
+		// 						  item.list.map((item1)=>{
+		// 							  if(item1.name==='排量(L)'){
+		// 								  sDisplacement=item1.value
+		// 							  }
+		// 						  })
+		// 					  }if(item.name==='engine'){
+		// 						  item.list.map((item1)=>{
+		// 							  if(item1.name==='排放标准'){
+		// 								  sEmission=item1.value
+		// 							  }
+		// 						  })
+		// 					  }
+		// 				  })
+		// 				  let sTitle=respBody.oCarItem.sBrand+' '+respBody.oCarItem.sLine+' '+respBody.oCarItem.sModel
+		// 				  this.setState({
+		// 					  carConfigList: newListConfigJson
+		// 				  })
+		// 				  let data = {
+		// 					  detailConfig: newListConfigJson,
+		// 					  carType:respBody.oCarItem,
+		// 					  rawPrice,
+		// 					  sTitle,
+		// 					  sGearbox,
+		// 					  sEmission,
+		// 					  sDisplacement,
+		// 				  }
+		// 				  // this.props.changeData(data, 1)
+		// 				  this.props.setLoadStatus(data)
+		// 			  }
+	  //
+		// 		  }
+		// 	  }
+		//   } catch (e) {
+		// 	  console.log('e', e)
+	  //
+		//   }
+	  // }
+	  // addLicense = async (params) => {
+		//   uni.showLoading({
+		// 	  title: '正在识别图片',
+		// 	  mask: true
+		//   });
+		//   const {iUid:uid, sToken:token} = getUser()
+		//   const payload = {
+		// 	  "svr_name": "MMHC.MmhcGoodsMngSvr",
+		// 	  "method_name": "DiscernDriLicense",
+		// 	  "req_body": {
+		// 		  iUid: uid,
+		// 		  sToken: token,
+		// 		  eConfigure: 0,
+		// 		  ...params
+		// 	  }
+		//   }
+		//   const dataResp = await request(payload)
+		//   try {
+		// 	  if (dataResp.hasOwnProperty('resp_code') && dataResp.resp_code === 0) {
+		// 		  const respBody = dataResp.resp_body
+	  //
+		// 		  if (respBody.eRetCode === 0) {
+		// 			  uni.hideLoading();
+		// 			  let carType = {
+		// 				  sBrand: respBody.oVinInfo.sBrandName,
+		// 				  sLine: respBody.oVinInfo.sCarLine,
+		// 				  iYear: parseInt(respBody.oVinInfo.sMadeYear),
+		// 				  sModel:respBody.oVinInfo.sMadeYear+'款 '+respBody.oVinInfo.sSaleName
+		// 			  }
+		// 			  let data = {
+		// 				  hasLicense: true,
+		// 				  showPart: 2,
+		// 				  licenseInfo: respBody.oLicenseInfo,
+		// 				  carType,
+		// 				  sDriLicenseObjName:params.sImageObjName
+		// 			  }
+		// 			  let data1={
+		// 				  sTitle:respBody.oVinInfo.sBrandName+' '+respBody.oVinInfo.sCarLine+' '+respBody.oVinInfo.sMadeYear+'款'+' '+respBody.oVinInfo.sSaleName
+		// 			  }
+		// 			  getCarConfig(carType)
+		// 		  } else {
+		// 			  uni.hideLoading();
+		// 			  uni.showToast({
+		// 				  title: '信息读取失败，请手动选择车型',
+		// 				  icon: 'none',
+		// 				  duration: 1500
+		// 			  })
+		// 		  }
+		// 	  }else {
+		// 		  uni.hideLoading();
+		// 		  uni.showToast({
+		// 			  title: '信息读取失败，请手动选择车型',
+		// 			  icon: 'none',
+		// 			  duration: 1500
+		// 		  })
+		// 		  console.log('e', e)
+	  //
+		// 	  }
+		//   } catch (e) {
+		// 	  uni.hideLoading();
+		// 	  uni.showToast({
+		// 		  title: '信息读取失败，请手动选择车型',
+		// 		  icon: 'none',
+		// 		  duration: 1500
+		// 	  })
+		// 	  console.log('e', e)
+	  //
+		//   }
+	  // }
+	  
 </script>
 
 <style scoped lang="scss">
@@ -243,6 +846,14 @@
 	   }
 	   .icon-shouhuodizhi {
 		   font-size: 36upx;
+	   }
+	 .unit{
+	       position: absolute;
+	       right: 60upx;
+	       z-index: 1001;
+	       top: 30%;
+	       font-size: 24upx;
+		   color:#F98B06;
 	   }
    }
    .add-btn {
