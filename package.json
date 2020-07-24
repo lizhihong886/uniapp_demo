@@ -4,6 +4,25 @@
     "sass-loader": "^8.0.2"
   },
   "dependencies": {
-    "ali-oss": "^6.10.0"
-  }
+    "ali-oss": "^6.10.0",
+    "crypto-js": "^4.0.0",
+    "js-base64": "^3.2.4"
+  },
+  "name": "uniapp_helloword",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lizhihong886/uniapp_demo.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lizhihong886/uniapp_demo/issues"
+  },
+  "homepage": "https://github.com/lizhihong886/uniapp_demo#readme",
+  "description": ""
 }

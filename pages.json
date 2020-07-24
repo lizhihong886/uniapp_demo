@@ -13,7 +13,7 @@
     	}
     },
 	{
-		"path": "pages/addCar/edit",
+		"path": "pages/addCar/add",
 		"style": {
 			"navigationBarTitleText": "Add Car"
 		}
@@ -40,7 +40,7 @@
 				"text":"首页"
 			},
 			{
-				"pagePath":"pages/addCar/edit",
+				"pagePath":"pages/addCar/add",
 				"iconPath":"static/tab/fabu-2.png",
 				"selectedIconPath":"static/tab/tab_icon_pub_selected@2x.png",
 				"text":"发布",

@@ -117,19 +117,18 @@
 </template>
 
 <script>
-	  import {uniCard, uniPagination} from '@dcloudio/uni-ui';
+	  // import {uniCard, uniPagination} from '@dcloudio/uni-ui';
 	  import getSts from "../../utils/oss/getSts";
 	  import {getSuffix} from "../../utils/suffix";
 	  import {getOssSecret, ossHost} from "../../utils/oss/conf";
 
 	  const OSS = require('ali-oss');
-	  
 	  var sourceType = [
 	  		['camera'], //拍照
 	  		['album'], //相册
 	  		['camera', 'album'] //拍照或相册
 	  	]
-	  	var sizeType = [
+	  var sizeType = [
 	  		['compressed'], //压缩
 	  		['original'], //原图
 	  		['compressed', 'original'] //压缩或原图
@@ -137,7 +136,6 @@
 	  var iUid=1
 	  var sToken=''
 	  export default {
-		  
 	          data() {
 				const currentDate = this.getDate({
 				             format: true
@@ -219,7 +217,8 @@
 							count: this.imageLength - this.imageList.length,
 							success: (res) => {
 								this.imageList = this.imageList.concat(res.tempFilePaths);
-								console.log("imageList",imageList)
+								console.log("imageList",this.imageList)
+								// uploadImage(this.imageList)
 							}
 						})
 					},
@@ -249,8 +248,7 @@
 							count: this.licenseLength - this.licenseImageList.length,
 							success: (res) => {
 								this.licenseImageList = this.licenseImageList.concat(res.tempFilePaths);
-								console.log("this.licenseImageList",this.licenseImageList)
-								uploadLicense(this.licenseImageList)
+								// uploadLicense(this.licenseImageList)
 							}
 						})
 					},
@@ -272,7 +270,7 @@
 					}
 				
 			}
-	    }
+	  }
 	  function h5_url_to_blob(url){
 		return new Promise((resolve,reject)=>{
 			var xhr = new XMLHttpRequest();
@@ -288,36 +286,18 @@
 			};
 			xhr.send();
 		})
-	}
-	  async function uploadOSS (){
-	    getSts().then(async (sign) => {
-			let client = new OSS({
-			  		  accessKeyId: sign.AccessKeyId, // 后台的临时签名ID
-			  		  accessKeySecret: sign.AccessKeySecret, // 后台的临时签名密钥
-			  		  stsToken: sign.SecurityToken,
-			  		  endpoint: 'oss-cn-shenzhen.aliyuncs.com', // 上传后的域名
-			  		  bucket: 'yunhu-alpha-ad', // OSS仓库名
-			    });
-			let suffix = getSuffix(item.url)
-			const stime = new Date().valueOf()
-			let objName = 'ytt_platform/images/' + iUid + '-' + stime  + '.' + suffix//  uid+时间戳
-			let blob=await h5_url_to_blob(url)
-			objName = objName.split('?')[0]
-			let result = await client.put(objName, blob);
-			console.log("upload result",result)
-	    }
-		)
-	 }
-	  async function uploadLicense (imgList){
+	  }
+	  async function uploadImage (imgList){
 		  getSts().then(async (sign) => {
 			  try{
 			  	  let objNames=[]
 				  imgList.map(async (item,ind)=>{
+				  	  console.log("item",item)
 					  try{
 						  const {policyBase64, signature} = getOssSecret(result.AccessKeySecret)
 						  let suffix = getSuffix(item)
 						  const stime = new Date().valueOf()
-						  const objName = 'drive_license/' + uid + '-' + stime + '-' + ind + '.' + suffix//  uid+时间戳
+						  const objName = 'ytt_platform/images/' + iUid + '-' + stime + '-' + ind + '.' + suffix//  uid+时间戳
 						  objNames.push(objName)
 						  uni.uploadFile({
 							  url: ossHost,
@@ -341,7 +321,7 @@
 											  // sImage:files[0].url,
 											  sImageObjName: objNames[0],
 										  }
-										  addLicense(params)
+										  // addLicense(params)
 									  }
 								  }
 							  },
@@ -666,156 +646,6 @@
 		}
 	  }
 	  }
-	  // //获取车辆配置信息
-	  // getCarConfig = async (carConfig) => {
-		//   const {iUid:uid} = getUser()
-		//   const payload = {
-		// 	  "svr_name": "AD.AdCarModelLibSvr",
-		// 	  "method_name": "QryCarConfig",
-		// 	  "req_body": {
-		// 		  iUid: uid,
-		// 		  listCarItem: [carConfig],
-		// 		  bSimMatch:true
-		// 	  }
-		//   }
-		//   const dataResp = await request(payload)
-		//   try {
-		// 	  if (dataResp.hasOwnProperty('resp_code') && dataResp.resp_code === 0) {
-		// 		  const respBody = dataResp.resp_body
-		// 		  if (respBody.eRetCode === 0) {
-		// 			  if (respBody.listConfigJson.length > 0) {
-		// 				  let listConfigJson = isJsonString(respBody.listConfigJson[0])?JSON.parse(respBody.listConfigJson[0]):[]
-		// 				  let newListConfigJson = []
-		// 				  let rawPrice = 0
-		// 				  let sGearbox=''
-		// 				  let sEmission=''
-		// 				  let sDisplacement=''
-		// 				  console.log("listConfigJson",listConfigJson)
-		// 				  listConfigJson.map((item) => {
-		// 					  if (item.name !== 'basicParam' && item.name !== 'basicInfo') {
-		// 						  newListConfigJson.push(item)
-		// 					  }
-		// 					  if(item.name === 'basicParam' ){
-		// 						  item.list.map((item1)=>{
-		// 							  if(item1.name==='厂商指导价'){
-		// 								  rawPrice = Number(item1.value.substr(0,item.value.length-1))*10000
-		// 							  }
-		// 						  })
-		// 					  }
-		// 					  if(item.name==='gearbox'){
-		// 						  item.list.map((item1)=>{
-		// 							  if(item1.name==='变速箱类型'){
-		// 								  sGearbox=item1.value
-		// 							  }
-		// 						  })
-		// 					  }
-		// 					  if(item.name==='basicInfo'){
-		// 						  item.list.map((item1)=>{
-		// 							  if(item1.name==='排量(L)'){
-		// 								  sDisplacement=item1.value
-		// 							  }
-		// 						  })
-		// 					  }if(item.name==='engine'){
-		// 						  item.list.map((item1)=>{
-		// 							  if(item1.name==='排放标准'){
-		// 								  sEmission=item1.value
-		// 							  }
-		// 						  })
-		// 					  }
-		// 				  })
-		// 				  let sTitle=respBody.oCarItem.sBrand+' '+respBody.oCarItem.sLine+' '+respBody.oCarItem.sModel
-		// 				  this.setState({
-		// 					  carConfigList: newListConfigJson
-		// 				  })
-		// 				  let data = {
-		// 					  detailConfig: newListConfigJson,
-		// 					  carType:respBody.oCarItem,
-		// 					  rawPrice,
-		// 					  sTitle,
-		// 					  sGearbox,
-		// 					  sEmission,
-		// 					  sDisplacement,
-		// 				  }
-		// 				  // this.props.changeData(data, 1)
-		// 				  this.props.setLoadStatus(data)
-		// 			  }
-	  //
-		// 		  }
-		// 	  }
-		//   } catch (e) {
-		// 	  console.log('e', e)
-	  //
-		//   }
-	  // }
-	  // addLicense = async (params) => {
-		//   uni.showLoading({
-		// 	  title: '正在识别图片',
-		// 	  mask: true
-		//   });
-		//   const {iUid:uid, sToken:token} = getUser()
-		//   const payload = {
-		// 	  "svr_name": "MMHC.MmhcGoodsMngSvr",
-		// 	  "method_name": "DiscernDriLicense",
-		// 	  "req_body": {
-		// 		  iUid: uid,
-		// 		  sToken: token,
-		// 		  eConfigure: 0,
-		// 		  ...params
-		// 	  }
-		//   }
-		//   const dataResp = await request(payload)
-		//   try {
-		// 	  if (dataResp.hasOwnProperty('resp_code') && dataResp.resp_code === 0) {
-		// 		  const respBody = dataResp.resp_body
-	  //
-		// 		  if (respBody.eRetCode === 0) {
-		// 			  uni.hideLoading();
-		// 			  let carType = {
-		// 				  sBrand: respBody.oVinInfo.sBrandName,
-		// 				  sLine: respBody.oVinInfo.sCarLine,
-		// 				  iYear: parseInt(respBody.oVinInfo.sMadeYear),
-		// 				  sModel:respBody.oVinInfo.sMadeYear+'款 '+respBody.oVinInfo.sSaleName
-		// 			  }
-		// 			  let data = {
-		// 				  hasLicense: true,
-		// 				  showPart: 2,
-		// 				  licenseInfo: respBody.oLicenseInfo,
-		// 				  carType,
-		// 				  sDriLicenseObjName:params.sImageObjName
-		// 			  }
-		// 			  let data1={
-		// 				  sTitle:respBody.oVinInfo.sBrandName+' '+respBody.oVinInfo.sCarLine+' '+respBody.oVinInfo.sMadeYear+'款'+' '+respBody.oVinInfo.sSaleName
-		// 			  }
-		// 			  getCarConfig(carType)
-		// 		  } else {
-		// 			  uni.hideLoading();
-		// 			  uni.showToast({
-		// 				  title: '信息读取失败，请手动选择车型',
-		// 				  icon: 'none',
-		// 				  duration: 1500
-		// 			  })
-		// 		  }
-		// 	  }else {
-		// 		  uni.hideLoading();
-		// 		  uni.showToast({
-		// 			  title: '信息读取失败，请手动选择车型',
-		// 			  icon: 'none',
-		// 			  duration: 1500
-		// 		  })
-		// 		  console.log('e', e)
-	  //
-		// 	  }
-		//   } catch (e) {
-		// 	  uni.hideLoading();
-		// 	  uni.showToast({
-		// 		  title: '信息读取失败，请手动选择车型',
-		// 		  icon: 'none',
-		// 		  duration: 1500
-		// 	  })
-		// 	  console.log('e', e)
-	  //
-		//   }
-	  // }
 	  
 </script>
 
