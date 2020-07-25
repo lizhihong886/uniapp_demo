@@ -1,5 +1,51 @@
 <template>
     <view class="content">
+        <view class="uploads">
+            <view class="row b-b">
+                <text class="tit">车辆图片</text>
+            </view>
+            <!-- 图片上传 -->
+            <view class='upload-image-view'>
+                <!-- 标题已经省略 -->
+                <!-- <view class='title'>上传xxxx图片</view> -->
+                <block v-for="(image,index) in imageList" :key="index">
+                    <view class='image-view'>
+                        <image :src="image" :data-src="image" @tap="previewImage"></image>
+                        <view class='del-btn' :data-index="index" @tap='deleteImage'>
+                            <view class='baicha'></view>
+                        </view>
+                    </view>
+                </block>
+                <view class='add-view' v-if="imageList.length < imageLength" @tap="chooseImage">
+
+                    <!-- 相机 -->
+                    <!-- <view class="xiangji">
+                                <view class="tixing"></view>
+                                <view class='changfx'>
+                                    <view class='yuan1'>
+                                        <view class='yuan2'></view>
+                                    </view>
+                                </view>
+                            </view> -->
+
+                    <!-- 十字架 -->
+                    <view class="cross">
+                        <view class="transverse-line"></view>
+                        <view class="vertical-line"></view>
+                    </view>
+
+                </view>
+                <view class='info'>上传图片，不超过{{imageLength}}张。(非必填)</view>
+            </view>
+            <!-- 图片上传 -->
+        </view>
+        <view class="row b-b">
+            <text class="tit">智能贴牌</text>
+            <view class="uni-list-cell uni-list-cell-pd">
+                <switch :checked="bSmartOem"   @change="switchChange" />
+            </view>
+
+        </view>
         <view class="row b-b">
             <text class="tit">商品名称</text>
             <input class="input" type="text" v-model="formData.sTitle" placeholder="品牌+型号+年份+版本" placeholder-class="placeholder" />
@@ -47,45 +93,6 @@
         <!--				</view>-->
         <!--				&lt;!&ndash; 图片上传 &ndash;&gt;-->
         <!--				</view>-->
-        <view class="uploads">
-            <view class="row b-b">
-                <text class="tit">车辆图片</text>
-            </view>
-            <!-- 图片上传 -->
-            <view class='upload-image-view'>
-                <!-- 标题已经省略 -->
-                <!-- <view class='title'>上传xxxx图片</view> -->
-                <block v-for="(image,index) in imageList" :key="index">
-                    <view class='image-view'>
-                        <image :src="image" :data-src="image" @tap="previewImage"></image>
-                        <view class='del-btn' :data-index="index" @tap='deleteImage'>
-                            <view class='baicha'></view>
-                        </view>
-                    </view>
-                </block>
-                <view class='add-view' v-if="imageList.length < imageLength" @tap="chooseImage">
-
-                    <!-- 相机 -->
-                    <!-- <view class="xiangji">
-                                <view class="tixing"></view>
-                                <view class='changfx'>
-                                    <view class='yuan1'>
-                                        <view class='yuan2'></view>
-                                    </view>
-                                </view>
-                            </view> -->
-
-                    <!-- 十字架 -->
-                    <view class="cross">
-                        <view class="transverse-line"></view>
-                        <view class="vertical-line"></view>
-                    </view>
-
-                </view>
-                <view class='info'>上传图片，不超过{{imageLength}}张。(非必填)</view>
-            </view>
-            <!-- 图片上传 -->
-        </view>
         <view class="row b-b">
             <text class="tit">行驶里程</text>
             <input class="input" type="text" v-model="formData.iCarMileage" placeholder="行驶里程" placeholder-class="placeholder" />
@@ -110,16 +117,39 @@
 
             </picker>
         </view>
+        <view class="row b-b">
+            <text class="tit markBold">商家信息</text>
+        </view>
+        <view class="row b-b">
+            <text class="tit">所属商家</text>
+            <input class="input" type="text" v-model="formData.sBusiness"  placeholder-class="placeholder" />
+        </view>
+        <view class="row b-b">
+            <text class="tit">地址</text>
+            <input class="input" type="text" v-model="formData.sBusinessAddress"  placeholder-class="placeholder" />
+        </view>
+        <view class="row b-b">
+            <text class="tit">联系人</text>
+            <input class="input" type="text" v-model="formData.sContacter"  placeholder-class="placeholder" />
+        </view>
+        <view class="row b-b">
+            <text class="tit">联系电话</text>
+            <input class="input" type="text" v-model="formData.sContactPhone"  placeholder-class="placeholder" />
+        </view>
 
         <button class="add-btn" @click="confirm">提交</button>
     </view>
 
 </template>
 <script>
+    import {request} from '../../service/request.js'
     import getSts from "../../utils/oss/getSts";
     import {getSuffix} from "../../utils/suffix";
     import {getOssSecret, ossHost} from "../../utils/oss/conf";
     const OSS = require('ali-oss');
+    const iUid=197;
+    const sToken=''
+    const iCompanyId=2
 
     var sourceType = [
         ['camera'], //拍照
@@ -131,8 +161,6 @@
         ['original'], //原图
         ['compressed', 'original'] //压缩或原图
     ]
-    var iUid=1
-    var sToken=''
     export default {
         data() {
             const currentDate = this.getDate({
@@ -157,8 +185,10 @@
                     sDisplacement:'',  //排量
                     sGearbox:'自动',  //变速箱
                     sEmission:'',  //排放标准
+                    licenseInfo:{}
                 },
                 date: currentDate,
+                bSmartOem:true,
                 imageList: [], //保存图片路径集合
                 imageLength: 9, //限制图片张数
                 sourceTypeIndex: 2, //添加方式限制
@@ -180,15 +210,17 @@
         methods: {
             confirm() {
                 let data = this.formData;
-                console.log(JSON.stringify(data))
+                handleSubmit()
 
             },
             bindPickerChange: function(e) {
-                console.log('picker发送选择改变，携带值为', e.target.value)
                 this.index = e.target.value
             },
             bindDateChange: function(e) {
                 this.date = e.target.value
+            },
+            switchChange: function (e) {
+                this.bSmartOem=!!e.target.value
             },
             getDate(type) {
                 const date = new Date();
@@ -203,7 +235,7 @@
                 }
                 month = month > 9 ? month : '0' + month;;
                 day = day > 9 ? day : '0' + day;
-                return `${year}-${month}-${day}`;
+                return `${year}-${month}`;
             },
             //选择图片
             chooseImage: async function() {
@@ -265,8 +297,45 @@
                 var images = that.licenseImageList;
                 images.splice(index, 1);
                 that.licenseImageList = images;
+            },
+            //  拉取用户信息
+            getCompanyAgentUser:async function() {
+                const payload = {
+                    "svr_name": "AdUserMngSvr",
+                    "method_name": "GetCompanyAgentUser",
+                    "req_body": {
+                        iUid:iUid,
+                        iCompanyId: 2
+                    }
+                }
+                const dataResp = await request(payload)
+                try {
+                    if (dataResp.hasOwnProperty('resp_code') && dataResp.resp_code === 0) {
+                        const respBody = dataResp.resp_body
+                        if (respBody.eRetCode === 0) {
+                            let userInfo = respBody.listUserInfo[0]
+                            //    将信息处理到stepData中
+                            this.formData={
+                                ...this.formData,
+                                sContacter:userInfo.sName,
+                                sContactPhone:userInfo.sPhoneNum,
+                                sBusiness:userInfo.sCompanyName,
+                                sBusinessAddress:userInfo.sLocation
+                            }
+
+                        } else {
+                            //    do something
+                        }
+                    }
+                } catch (e) {
+                    console.log('e', e)
+
+                }
             }
 
+        },
+        mounted(){
+            this.getCompanyAgentUser();
         }
     };
     async function uploadImage (imgList){
@@ -323,18 +392,18 @@
      )
     }
     async function handleSubmit (){
-        let iUid=0;
-        let sToken="";
-        let iCompanyId=0;
+        let iUid=197;
+        let sToken="925fcf510ab2f7b4a6006f4acd6940d6";
+        let iCompanyId=2;
         let data = this.formData;
-        if (this.imageList.length === 0) {
-            uni.showToast({
-                title: '请至少上传一张图片',
-                icon: 'none',
-                duration: 1500
-            })
-            return;
-        }
+        // if (this.imageList.length === 0) {
+        //     uni.showToast({
+        //         title: '请至少上传一张图片',
+        //         icon: 'none',
+        //         duration: 1500
+        //     })
+        //     return;
+        // }
         if (data.iSalePrice === '') {
             uni.showToast({
                 title: '请填写商品价格！',
@@ -351,7 +420,7 @@
             })
             return;
         }
-        if (data.iCarMileage === '' && stepData3.eCarType === 1) {
+        if (data.iCarMileage === '' && data.eCarType === 1) {
             uni.showToast({
                 title: '请填写表显里程！',
                 icon: 'none',
@@ -371,7 +440,7 @@
             return;
         }
         //  售价不能低于底价
-        if(parseFloat(stepData3.iSalePrice)<parseFloat(stepData3.iBasicPrice)){
+        if(parseFloat(data.iSalePrice)<parseFloat(data.iBasicPrice)){
             uni.showToast({
                 title: '售价不能低于底价！',
                 icon: 'none',
@@ -381,11 +450,11 @@
         }
         let params = {}
         let ListDes = []
-        let registerDate = ''
-        let carConfig = stepData2.carType
+        let registerDate = this.date
+        let carConfig = {}
         if (data.eCarType === 1) {   //  1是二手车， 2是新车
             if (data.sCarLocation) {
-                ListDes.push(stepData3.sCarLocation)
+                ListDes.push(data.sCarLocation)
             }
             // if (values.registerDate) {
             //     ListDes.push(`${moment(values.registerDate).format('YYYY/MM')}   上牌`)
@@ -426,7 +495,7 @@
                 "sJsonPart1": JSON.stringify({
                     "key1": {
                         "title": "售价",
-                        "value": data.iSalePrice ? Number(stepData3.iSalePrice) : 0,
+                        "value": data.iSalePrice ? Number(data.iSalePrice) : 0,
                         "fieldName": "salePrice"
                     },
                     "key2": {
@@ -503,17 +572,17 @@
                 "iBasicPrice": data.iBasicPrice ? Number(data.iBasicPrice) : 0,
                 "sGoodsDesc": JSON.stringify(ListDes),
                 "listObjectName": objNames,
-                "sImgJson": JSON.stringify(stepData1.imgInfoList),
+                "sImgJson": JSON.stringify(data.imgInfoList),
                 "sLinkText": "",
                 // "sGoodsDesc": "",
                 "iGoodsTypeId": 1,
                 "sJsonRawData": JSON.stringify({
-                    'iCompanyId': companyId,
+                    'iCompanyId': iCompanyId,
                     'sTitle': data.sTitle,
-                    'sBrand': data.carType.sBrand,
-                    'sYear': data.carType.iYear,
-                    'sLine': data.carType.sLine,
-                    'sModel': data.carType.sModel,
+                    'sBrand': '',
+                    'sYear': '',
+                    'sLine': '',
+                    'sModel': '',
                     'salePrice': data.iSalePrice ? Number(data.iSalePrice) : 0,
                     'iBasicPrice': Number(data.iBasicPrice),
                     'sCompany': data.sBusiness,
@@ -537,11 +606,11 @@
                     iMonthPay: data.iMonthPay ? parseInt(data.iMonthPay) : 0,
                 }),
                 "eCarType": data.eCarType ? parseInt(data.eCarType) : 1,
-                "iCompanyId": companyId ? companyId : 1,
+                "iCompanyId": iCompanyId ? iCompanyId : 1,
                 "carConfig": carConfig,
                 //     新增字段
                 sDriLicenseObjName: data.sDriLicenseObjName,
-                bSmartOem: stepData1.value,
+                bSmartOem: this.bSmartOem,
                 sCarColor: data.sCarColor,
                 oBusinessInfo: {
                     sBusiness: data.sBusiness,
@@ -549,13 +618,13 @@
                     sContacter: data.sContacter,
                     sContactPhone: data.sContactPhone,
                 },
-                oDriLicenseInfo: stepData2.licenseInfo,
+                oDriLicenseInfo: data.licenseInfo,
                 iCarMileage: data.iCarMileage ? parseInt(data.iCarMileage) : 0,
                 sCarLocation: data.sCarLocation,
 
                 //    新增字段
                 iRawPrice: data.iRawPrice ? data.iRawPrice : 0,  //新车含税价
-                sRegisterDate: data.sRegisterDate,  //上牌时间
+                sRegisterDate: registerDate,  //上牌时间
                 sBelongAddr: data.sBelongAddr,  //归属地
                 sDisplacement: data.sDisplacement,  //排量
                 sGearBox: data.sGearBox,  //变速箱
@@ -567,12 +636,13 @@
                 }
             }
             const payload = {
-                "svr_name": "MMHC.MmhcGoodsMngSvr",
-                "method_name": "AddCar",
+                "svr_name": "AD.AdGoodsMngSvr",
+                "method_name": "UploadNewCar",
                 "req_body": {
                     iUid: iUid,
                     sToken: sToken,
                     oGoodsInfo: params,
+                    eSaveWay: 0
                 }
             }
             const dataResp = await request(payload)
@@ -628,6 +698,7 @@
     }
 
 
+
 </script>
 <style scoped lang="scss">
     page {
@@ -644,6 +715,10 @@
             flex-shrink: 0;
             width: 180upx;
             font-size: 30upx;
+        }
+        .markBold{
+            font-weight: bold;
+            font-size: 32upx;
         }
         .input {
             flex: 1;
