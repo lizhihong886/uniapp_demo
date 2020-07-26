@@ -11,7 +11,7 @@
                 <block v-for="(image,index) in imageList" :key="index">
                     <view class='image-view'>
                         <image :src="image" :data-src="image" @tap="previewImage"></image>
-                        <view class='del-btn' :data-index="index" @tap='deleteImage'>
+                        <view class='del-btn' :data-index="index" @tap='deleteImage(index)'>
                             <view class='baicha'></view>
                         </view>
                     </view>
@@ -194,7 +194,10 @@
                 sourceTypeIndex: 2, //添加方式限制
                 sizeTypeIndex: 0, //图片尺寸限制
                 licenseImageList:[],
-                licenseLength:1
+                licenseLength:1,
+                objectList:[],
+                uploadRecordMap:{},
+                imgInfoList:[],
             }
         },
         onLoad(option) {},
@@ -209,8 +212,9 @@
         },
         methods: {
             confirm() {
+                console.log("confirm")
                 let data = this.formData;
-                handleSubmit()
+                this.handleSubmit()
 
             },
             bindPickerChange: function(e) {
@@ -247,8 +251,7 @@
                     count: this.imageLength - this.imageList.length,
                     success: (res) => {
                         this.imageList = this.imageList.concat(res.tempFilePaths);
-                        console.log("imageList",this.imageList)
-                        // uploadImage(this.imageList)
+                        this.uploadImage(this.imageList)
                     }
                 })
             },
@@ -261,10 +264,22 @@
                 })
             },
             //删除图片
-            deleteImage: function(e) {
-                var index = e.target.dataset.index;
+            deleteImage: function(index,e) {
                 var that = this;
                 var images = that.imageList;
+                const fileName=images[index]
+                let uploadMap=that.uploadRecordMap
+                if(uploadMap.hasOwnProperty(fileName)){
+                    console.log("has",fileName)
+                    let objectName=uploadMap[fileName]
+                    let objList=that.objectList
+                    let idx=objList.indexOf(objectName)
+                    if(idx>-1){
+                        objList.splice(idx,1)
+                        that.objectList=objList
+                    }
+                    console.log(" this.objectList", that.objectList)
+                }
                 images.splice(index, 1);
                 that.imageList = images;
             },
@@ -331,343 +346,359 @@
                     console.log('e', e)
 
                 }
-            }
+            },
+            uploadImage:async function  (imgList){
+                let that=this
+                let objNames=[]
+                getSts().then(async (sign) => {
+                        try{
+                            imgList.map(async (item,index)=>{
+                                try{
+                                    const {policyBase64, signature} = getOssSecret(sign.AccessKeySecret)
+                                    let suffix = getSuffix(item)
+                                    const stime = new Date().valueOf()
+                                    const objName = 'ytt_platform/images/' + iUid + '-' + stime + '-' + index + '.' + suffix//  uid+时间戳
+                                    objNames.push(objName)
+                                    that.objectList=objNames
+                                    uni.uploadFile({
+                                        url: ossHost,
+                                        filePath: item,//要上传文件资源的路径
+                                        name: 'file',//必须填file
+                                        formData: {
+                                            'key': objName,
+                                            'policy': policyBase64,
+                                            'OSSAccessKeyId': sign.AccessKeyId,
+                                            'success_action_status': '200',
+                                            'signature': signature,
+                                            'x-oss-security-token': sign.SecurityToken
+                                        },
+                                        success: function (res) {
+                                            console.log("res",res)
+                                            if (res.statusCode === 200) {
 
-        },
-        mounted(){
-            this.getCompanyAgentUser();
-        }
-    };
-    async function uploadImage (imgList){
-     getSts().then(async (sign) => {
-      try{
-      	  let objNames=[]
-    	  imgList.map(async (item,ind)=>{
-    	  	  console.log("item",item)
-    		  try{
-    			  const {policyBase64, signature} = getOssSecret(result.AccessKeySecret)
-    			  let suffix = getSuffix(item)
-    			  const stime = new Date().valueOf()
-    			  const objName = 'ytt_platform/images/' + iUid + '-' + stime + '-' + ind + '.' + suffix//  uid+时间戳
-    			  objNames.push(objName)
-    			  uni.uploadFile({
-    				  url: ossHost,
-    				  filePath: item.url,//要上传文件资源的路径
-    				  name: 'file',//必须填file
-    				  formData: {
-    					  'key': objName,
-    					  'policy': policyBase64,
-    					  'OSSAccessKeyId': sign.AccessKeyId,
-    					  'success_action_status': '200',
-    					  'signature': signature,
-    					  'x-oss-security-token': sign.SecurityToken
-    				  },
-    				  success: function (res) {
-    					  index++
-    					  if (res.statusCode === 200) {
-    						  //  在最后一张图片上传成功的时候发布到后台
-    						  if (index === imgList.length) {
-    							  // 最后一张
-    							  let params = {
-    								  // sImage:files[0].url,
-    								  sImageObjName: objNames[0],
-    							  }
-    						  }
-    					  }
-    				  },
-    				  fail: function (errMsg) {
-    					  index++
-    					  console.log('fail', errMsg)
-    				  }
-    			  })
+                                                let recordMap=that.uploadRecordMap
+                                                recordMap[item]=objName
+                                                that.uploadRecordMap=recordMap
+                                                that.objectList=objNames
+                                            }else {
+                                                let objectNames=that.objectList
+                                                let idx=objectNames.indexOf(objName)
+                                                if(idx>-1){
+                                                    objectNames.splice(idx,1)
+                                                }
+                                                that.objectList=objectNames
+                                            }
+                                        },
+                                        fail: function (errMsg) {
+                                            console.log('fail', errMsg)
+                                            let objectNames=that.objectList
+                                            let idx=objectNames.indexOf(objName)
+                                            if(idx>-1){
+                                                objectNames.splice(idx,1)
+                                            }
+                                            that.objectList=objectNames
+                                        }
+                                    })
 
-    		  }catch{
-    			  console.log("e",e)
-    		  }
-    	  })
-      }catch(e){
-    	  console.log("getSts",e)
-      }
-     }
-     )
-    }
-    async function handleSubmit (){
-        let iUid=197;
-        let sToken="925fcf510ab2f7b4a6006f4acd6940d6";
-        let iCompanyId=2;
-        let data = this.formData;
-        // if (this.imageList.length === 0) {
-        //     uni.showToast({
-        //         title: '请至少上传一张图片',
-        //         icon: 'none',
-        //         duration: 1500
-        //     })
-        //     return;
-        // }
-        if (data.iSalePrice === '') {
-            uni.showToast({
-                title: '请填写商品价格！',
-                icon: 'none',
-                duration: 1500
-            })
-            return;
-        }
-        if (data.iSalePrice === '') {
-            uni.showToast({
-                title: '请填写商品价格！',
-                icon: 'none',
-                duration: 1500
-            })
-            return;
-        }
-        if (data.iCarMileage === '' && data.eCarType === 1) {
-            uni.showToast({
-                title: '请填写表显里程！',
-                icon: 'none',
-                duration: 1500
-            })
-            return;
-        }
-        //  判断价格
-        if (parseFloat(data.iSalePrice)<0||parseFloat(data.iSalePrice)>3000
-            || parseFloat(data.iBasicPrice)<0||parseFloat(data.iBasicPrice)>3000
-            || parseFloat(data.iRawPrice)<0||parseFloat(data.iRawPrice)>3000) {
-            uni.showToast({
-                title: '请检查您填写的价格！',
-                icon: 'none',
-                duration: 1500
-            })
-            return;
-        }
-        //  售价不能低于底价
-        if(parseFloat(data.iSalePrice)<parseFloat(data.iBasicPrice)){
-            uni.showToast({
-                title: '售价不能低于底价！',
-                icon: 'none',
-                duration: 1500
-            })
-            return;
-        }
-        let params = {}
-        let ListDes = []
-        let registerDate = this.date
-        let carConfig = {}
-        if (data.eCarType === 1) {   //  1是二手车， 2是新车
-            if (data.sCarLocation) {
-                ListDes.push(data.sCarLocation)
-            }
-            // if (values.registerDate) {
-            //     ListDes.push(`${moment(values.registerDate).format('YYYY/MM')}   上牌`)
-            // }
-            if (data.iCarMileage) {
-                ListDes.push(`${data.iCarMileage}万公里`)
-            }
-            registerDate = data.sRegisterDate ? data.sRegisterDate : ''
-            if (data.iSalePrice) {
-                let iPrice = 0
-                try {
-                    iPrice = parseFloat(data.iSalePrice) || 0
-                    iPrice = iPrice * 10000
-                    data.iSalePrice = iPrice
-                } catch (e) {
-                }
-            }
-            if (data.iBasicPrice) {
-                let iPrice = 0
-                try {
-                    iPrice = parseFloat(data.iBasicPrice) || 0
-                    iPrice = iPrice * 10000
-                    data.iBasicPrice = iPrice
-                } catch (e) {
-                }
-            }
-            if (data.iRawPrice) {
-                let iPrice = 0
-                try {
-                    iPrice = parseFloat(data.iRawPrice) || 0
-                    iPrice = iPrice * 10000
-                    data.iRawPrice = iPrice
-                } catch (e) {
-                }
-            }
-            params = {
-                "sTitle": data.sTitle ? data.sTitle : '',
-                "sJsonPart1": JSON.stringify({
-                    "key1": {
-                        "title": "售价",
-                        "value": data.iSalePrice ? Number(data.iSalePrice) : 0,
-                        "fieldName": "salePrice"
-                    },
-                    "key2": {
-                        "title": "新车含税价",
-                        "value": data.iRawPrice,
-                        "fieldName": "rawPrice"
-                    },
-                    "key3": {
-                        "title": "贷款", "value": [
-                            {
-                                "title": "首付",
-                                "value": data.iFirstPay ? parseInt(data.iFirstPay) : 0,
-                                "fieldName": "firstPay",
-                                "isMoney": 1
-                            },
-                            {
-                                "title": "月供",
-                                "value": data.iMonthPay ? parseInt(data.iMonthPay) : 0,
-                                "fieldName": "monthPay",
-                                "isMoney": 1
-                            },
-                            {
-                                "title": "期数",
-                                "value": data.iPeriod ? parseInt(data.iPeriod) : 0,
-                                "fieldName": "monthCount",
-                                "isMoney": 0
-                            }
-                        ]
-                    }
-                }),
-                "sJsonPart2": JSON.stringify([
-                    {"title": "公司名", "value": data.sBusiness ? data.sBusiness : '', "fieldName": "sCompany"},
-                    {
-                        "title": "地址",
-                        "value": data.sBusinessAddress ? data.sBusinessAddress : '',
-                        "fieldName": "sAddress"
-                    },
-                    {
-                        "title": "联系人",
-                        "value": `${data.sContacter}:${data.sContactPhone}`,
-                        "fieldName": "slinkMan"
-                    }]),
-                "sJsonPart3": JSON.stringify([
-                    {
-                        "title": "表显里程",
-                        "value": data.iCarMileage ? `${data.iCarMileage}万公里` : '',
-                        "fieldName": "sMileage"
-                    },
-                    {"title": "上牌时间", "value": registerDate, "fieldName": "registerDate"},
-                    {
-                        "title": "上牌地",
-                        "value": data.sBelongAddr ? data.sBelongAddr : '',
-                        "fieldName": "sBelongAddr"
-                    },
-                    // {
-                    //     "title": "所在地",
-                    //     "value": stepData3.sCarLocation ? stepData3.sCarLocation : '',
-                    //     "fieldName": "currentAddr"
-                    // },
-                    {"title": "车身颜色", "value": data.sCarColor ? data.sCarColor : '', "fieldName": "sColor"},
-                    {
-                        "title": "排放标准",
-                        "value": data.sEmission ? data.sEmission : '',
-                        "fieldName": "sStandard"
-                    },
-                    {"title": "变速箱", "value": data.sGearbox ? data.sGearbox : '', "fieldName": "sGearbox"},
-                    {
-                        "title": "排量",
-                        "value": data.sDisplacement ? data.sDisplacement : '',
-                        "fieldName": "displacement"
-                    }
-                ]),
-                "iSalePrice": data.iSalePrice ? Number(data.iSalePrice) : 0,
-                "iBasicPrice": data.iBasicPrice ? Number(data.iBasicPrice) : 0,
-                "sGoodsDesc": JSON.stringify(ListDes),
-                "listObjectName": objNames,
-                "sImgJson": JSON.stringify(data.imgInfoList),
-                "sLinkText": "",
-                // "sGoodsDesc": "",
-                "iGoodsTypeId": 1,
-                "sJsonRawData": JSON.stringify({
-                    'iCompanyId': iCompanyId,
-                    'sTitle': data.sTitle,
-                    'sBrand': '',
-                    'sYear': '',
-                    'sLine': '',
-                    'sModel': '',
-                    'salePrice': data.iSalePrice ? Number(data.iSalePrice) : 0,
-                    'iBasicPrice': Number(data.iBasicPrice),
-                    'sCompany': data.sBusiness,
-                    'sAddress': data.sBusinessAddress,
-                    'slinkMan': data.sContacter,
-                    'sPhone': data.sContactPhone,
-                    'rawPrice': data.iRawPrice,
-                    'carType': data.eCarType,
-                    'sMileage': data.iCarMileage,
-                    'currentAddr': data.sCarLocation,
-                    'sGoodsType': 1,
-                    'iGoodsTypeId': 1,
-                    'sColor': data.sCarColor,
-                    'sDisplacement': data.sDisplacement,
-                    'sGearbox': data.sGearbox,
-                    'sStandard': data.sEmission,
-                    'sBelongAddr': data.sBelongAddr,
-                    'sRegisterDate': data.sRegisterDate,
-                    iFirstPay: data.iFirstPay ? parseInt(data.iFirstPay) : 0,
-                    iPeriod: data.iPeriod ? parseInt(data.iPeriod) : 0,
-                    iMonthPay: data.iMonthPay ? parseInt(data.iMonthPay) : 0,
-                }),
-                "eCarType": data.eCarType ? parseInt(data.eCarType) : 1,
-                "iCompanyId": iCompanyId ? iCompanyId : 1,
-                "carConfig": carConfig,
-                //     新增字段
-                sDriLicenseObjName: data.sDriLicenseObjName,
-                bSmartOem: this.bSmartOem,
-                sCarColor: data.sCarColor,
-                oBusinessInfo: {
-                    sBusiness: data.sBusiness,
-                    sBusinessAddress: data.sBusinessAddress,
-                    sContacter: data.sContacter,
-                    sContactPhone: data.sContactPhone,
-                },
-                oDriLicenseInfo: data.licenseInfo,
-                iCarMileage: data.iCarMileage ? parseInt(data.iCarMileage) : 0,
-                sCarLocation: data.sCarLocation,
-
-                //    新增字段
-                iRawPrice: data.iRawPrice ? data.iRawPrice : 0,  //新车含税价
-                sRegisterDate: registerDate,  //上牌时间
-                sBelongAddr: data.sBelongAddr,  //归属地
-                sDisplacement: data.sDisplacement,  //排量
-                sGearBox: data.sGearBox,  //变速箱
-                sEmission: data.sEmission,  //排放标准
-                oLoanInfo: {
-                    iFirstPay: data.iFirstPay ? parseInt(data.iFirstPay) : 0,
-                    iPeriod: data.iPeriod ? parseInt(data.iPeriod) : 0,
-                    iMonthPay: data.iMonthPay ? parseInt(data.iMonthPay) : 0,
-                }
-            }
-            const payload = {
-                "svr_name": "AD.AdGoodsMngSvr",
-                "method_name": "UploadNewCar",
-                "req_body": {
-                    iUid: iUid,
-                    sToken: sToken,
-                    oGoodsInfo: params,
-                    eSaveWay: 0
-                }
-            }
-            const dataResp = await request(payload)
-            uni.hideLoading()
-            try {
-                if (dataResp.hasOwnProperty('resp_code') && dataResp.resp_code === 0) {
-                    const respBody = dataResp.resp_body
-                    if (respBody.eRetCode === 0) {
-                        uni.showToast({
-                            title: '操作成功',
-                            icon: 'none',
-                            duration: 1500
-                        })
-
-                        uni.switchTab({
-                            url: `/pages/index/index`
-                        });
-                    } else {
-                        if (respBody.eRetCode === 105) {
-                            uni.hideLoading()
-                            uni.showToast({
-                                title: '文字内容违规',
-                                icon: 'none',
-                                duration: 1500
+                                }catch{
+                                    console.log("e",e)
+                                }
                             })
+                        }catch(e){
+                            console.log("getSts",e)
+                        }
+                    }
+                )
+            },
+            handleSubmit:async function  (){
+                console.log("submit")
+                let iUid=197;
+                let sToken="925fcf510ab2f7b4a6006f4acd6940d6";
+                let iCompanyId=2;
+                let data = this.formData;
+                let objectList=this.objectList
+                // if (this.imageList.length === 0) {
+                //     uni.showToast({
+                //         title: '请至少上传一张图片',
+                //         icon: 'none',
+                //         duration: 1500
+                //     })
+                //     return;
+                // }
+                if (data.iSalePrice === '') {
+                    uni.showToast({
+                        title: '请填写商品价格！',
+                        icon: 'none',
+                        duration: 1500
+                    })
+                    return;
+                }
+                if (data.iSalePrice === '') {
+                    uni.showToast({
+                        title: '请填写商品价格！',
+                        icon: 'none',
+                        duration: 1500
+                    })
+                    return;
+                }
+                if (data.iCarMileage === '' && data.eCarType === 1) {
+                    uni.showToast({
+                        title: '请填写表显里程！',
+                        icon: 'none',
+                        duration: 1500
+                    })
+                    return;
+                }
+                //  判断价格
+                if (parseFloat(data.iSalePrice)<0||parseFloat(data.iSalePrice)>3000
+                    || parseFloat(data.iBasicPrice)<0||parseFloat(data.iBasicPrice)>3000
+                    || parseFloat(data.iRawPrice)<0||parseFloat(data.iRawPrice)>3000) {
+                    uni.showToast({
+                        title: '请检查您填写的价格！',
+                        icon: 'none',
+                        duration: 1500
+                    })
+                    return;
+                }
+                //  售价不能低于底价
+                if(parseFloat(data.iSalePrice)<parseFloat(data.iBasicPrice)){
+                    uni.showToast({
+                        title: '售价不能低于底价！',
+                        icon: 'none',
+                        duration: 1500
+                    })
+                    return;
+                }
+                let params = {}
+                let ListDes = []
+                let registerDate = this.date
+                let carConfig = {}
+                if (data.eCarType === 1) {   //  1是二手车， 2是新车
+                    if (data.sCarLocation) {
+                        ListDes.push(data.sCarLocation)
+                    }
+                    // if (values.registerDate) {
+                    //     ListDes.push(`${moment(values.registerDate).format('YYYY/MM')}   上牌`)
+                    // }
+                    if (data.iCarMileage) {
+                        ListDes.push(`${data.iCarMileage}万公里`)
+                    }
+                    registerDate = data.sRegisterDate ? data.sRegisterDate : ''
+                    if (data.iSalePrice) {
+                        let iPrice = 0
+                        try {
+                            iPrice = parseFloat(data.iSalePrice) || 0
+                            iPrice = iPrice * 10000
+                            data.iSalePrice = iPrice
+                        } catch (e) {
+                        }
+                    }
+                    if (data.iBasicPrice) {
+                        let iPrice = 0
+                        try {
+                            iPrice = parseFloat(data.iBasicPrice) || 0
+                            iPrice = iPrice * 10000
+                            data.iBasicPrice = iPrice
+                        } catch (e) {
+                        }
+                    }
+                    if (data.iRawPrice) {
+                        let iPrice = 0
+                        try {
+                            iPrice = parseFloat(data.iRawPrice) || 0
+                            iPrice = iPrice * 10000
+                            data.iRawPrice = iPrice
+                        } catch (e) {
+                        }
+                    }
+                    params = {
+                        "sTitle": data.sTitle ? data.sTitle : '',
+                        "sJsonPart1": JSON.stringify({
+                            "key1": {
+                                "title": "售价",
+                                "value": data.iSalePrice ? Number(data.iSalePrice) : 0,
+                                "fieldName": "salePrice"
+                            },
+                            "key2": {
+                                "title": "新车含税价",
+                                "value": data.iRawPrice,
+                                "fieldName": "rawPrice"
+                            },
+                            "key3": {
+                                "title": "贷款", "value": [
+                                    {
+                                        "title": "首付",
+                                        "value": data.iFirstPay ? parseInt(data.iFirstPay) : 0,
+                                        "fieldName": "firstPay",
+                                        "isMoney": 1
+                                    },
+                                    {
+                                        "title": "月供",
+                                        "value": data.iMonthPay ? parseInt(data.iMonthPay) : 0,
+                                        "fieldName": "monthPay",
+                                        "isMoney": 1
+                                    },
+                                    {
+                                        "title": "期数",
+                                        "value": data.iPeriod ? parseInt(data.iPeriod) : 0,
+                                        "fieldName": "monthCount",
+                                        "isMoney": 0
+                                    }
+                                ]
+                            }
+                        }),
+                        "sJsonPart2": JSON.stringify([
+                            {"title": "公司名", "value": data.sBusiness ? data.sBusiness : '', "fieldName": "sCompany"},
+                            {
+                                "title": "地址",
+                                "value": data.sBusinessAddress ? data.sBusinessAddress : '',
+                                "fieldName": "sAddress"
+                            },
+                            {
+                                "title": "联系人",
+                                "value": `${data.sContacter}:${data.sContactPhone}`,
+                                "fieldName": "slinkMan"
+                            }]),
+                        "sJsonPart3": JSON.stringify([
+                            {
+                                "title": "表显里程",
+                                "value": data.iCarMileage ? `${data.iCarMileage}万公里` : '',
+                                "fieldName": "sMileage"
+                            },
+                            {"title": "上牌时间", "value": registerDate, "fieldName": "registerDate"},
+                            {
+                                "title": "上牌地",
+                                "value": data.sBelongAddr ? data.sBelongAddr : '',
+                                "fieldName": "sBelongAddr"
+                            },
+                            // {
+                            //     "title": "所在地",
+                            //     "value": stepData3.sCarLocation ? stepData3.sCarLocation : '',
+                            //     "fieldName": "currentAddr"
+                            // },
+                            {"title": "车身颜色", "value": data.sCarColor ? data.sCarColor : '', "fieldName": "sColor"},
+                            {
+                                "title": "排放标准",
+                                "value": data.sEmission ? data.sEmission : '',
+                                "fieldName": "sStandard"
+                            },
+                            {"title": "变速箱", "value": data.sGearbox ? data.sGearbox : '', "fieldName": "sGearbox"},
+                            {
+                                "title": "排量",
+                                "value": data.sDisplacement ? data.sDisplacement : '',
+                                "fieldName": "displacement"
+                            }
+                        ]),
+                        "iSalePrice": data.iSalePrice ? Number(data.iSalePrice) : 0,
+                        "iBasicPrice": data.iBasicPrice ? Number(data.iBasicPrice) : 0,
+                        "sGoodsDesc": JSON.stringify(ListDes),
+                        "listObjectName": objectList,
+                        "sImgJson": JSON.stringify(data.imgInfoList),
+                        "sLinkText": "",
+                        // "sGoodsDesc": "",
+                        "iGoodsTypeId": 1,
+                        "sJsonRawData": JSON.stringify({
+                            'iCompanyId': iCompanyId,
+                            'sTitle': data.sTitle,
+                            'sBrand': '',
+                            'sYear': '',
+                            'sLine': '',
+                            'sModel': '',
+                            'salePrice': data.iSalePrice ? Number(data.iSalePrice) : 0,
+                            'iBasicPrice': Number(data.iBasicPrice),
+                            'sCompany': data.sBusiness,
+                            'sAddress': data.sBusinessAddress,
+                            'slinkMan': data.sContacter,
+                            'sPhone': data.sContactPhone,
+                            'rawPrice': data.iRawPrice,
+                            'carType': data.eCarType,
+                            'sMileage': data.iCarMileage,
+                            'currentAddr': data.sCarLocation,
+                            'sGoodsType': 1,
+                            'iGoodsTypeId': 1,
+                            'sColor': data.sCarColor,
+                            'sDisplacement': data.sDisplacement,
+                            'sGearbox': data.sGearbox,
+                            'sStandard': data.sEmission,
+                            'sBelongAddr': data.sBelongAddr,
+                            'sRegisterDate': data.sRegisterDate,
+                            iFirstPay: data.iFirstPay ? parseInt(data.iFirstPay) : 0,
+                            iPeriod: data.iPeriod ? parseInt(data.iPeriod) : 0,
+                            iMonthPay: data.iMonthPay ? parseInt(data.iMonthPay) : 0,
+                        }),
+                        "eCarType": data.eCarType ? parseInt(data.eCarType) : 1,
+                        "iCompanyId": iCompanyId ? iCompanyId : 1,
+                        "carConfig": carConfig,
+                        //     新增字段
+                        sDriLicenseObjName: '',
+                        bSmartOem: this.bSmartOem,
+                        sCarColor: data.sCarColor,
+                        oBusinessInfo: {
+                            sBusiness: data.sBusiness,
+                            sBusinessAddress: data.sBusinessAddress,
+                            sContacter: data.sContacter,
+                            sContactPhone: data.sContactPhone,
+                        },
+                        oDriLicenseInfo: data.licenseInfo,
+                        iCarMileage: data.iCarMileage ? parseInt(data.iCarMileage) : 0,
+                        sCarLocation: data.sCarLocation,
+
+                        //    新增字段
+                        iRawPrice: data.iRawPrice ? data.iRawPrice : 0,  //新车含税价
+                        sRegisterDate: registerDate,  //上牌时间
+                        sBelongAddr: data.sBelongAddr,  //归属地
+                        sDisplacement: data.sDisplacement,  //排量
+                        sGearBox: data.sGearBox,  //变速箱
+                        sEmission: data.sEmission,  //排放标准
+                        oLoanInfo: {
+                            iFirstPay: data.iFirstPay ? parseInt(data.iFirstPay) : 0,
+                            iPeriod: data.iPeriod ? parseInt(data.iPeriod) : 0,
+                            iMonthPay: data.iMonthPay ? parseInt(data.iMonthPay) : 0,
+                        }
+                    }
+                    const payload = {
+                        "svr_name": "AD.AdGoodsMngSvr",
+                        "method_name": "UploadNewCar",
+                        "req_body": {
+                            iUid: iUid,
+                            sToken: sToken,
+                            oGoodsInfo: params,
+                            eSaveWay: 0
+                        }
+                    }
+                    console.log("payload",payload)
+                    const dataResp = await request(payload)
+                    console.log("dataResp",dataResp)
+                    uni.hideLoading()
+                    try {
+                        if (dataResp.hasOwnProperty('resp_code') && dataResp.resp_code === 0) {
+                            const respBody = dataResp.resp_body
+                            if (respBody.eRetCode === 0) {
+                                uni.showToast({
+                                    title: '操作成功',
+                                    icon: 'none',
+                                    duration: 1500
+                                })
+                                uni.switchTab({
+                                    url: `/pages/index/index`
+                                });
+                            } else {
+                                if (respBody.eRetCode === 105) {
+                                    uni.hideLoading()
+                                    uni.showToast({
+                                        title: '文字内容违规',
+                                        icon: 'none',
+                                        duration: 1500
+                                    })
+                                } else {
+                                    uni.hideLoading()
+                                    uni.showToast({
+                                        title: '操作失败',
+                                        icon: 'none',
+                                        duration: 1500
+                                    })
+                                }
+                            }
                         } else {
                             uni.hideLoading()
                             uni.showToast({
@@ -676,26 +707,25 @@
                                 duration: 1500
                             })
                         }
+                    } catch (e) {
+                        uni.hideLoading()
+                        uni.showToast({
+                            title: '操作失败',
+                            icon: 'none',
+                            duration: 1500
+                        })
+                        console.log('e', e)
                     }
-                } else {
-                    uni.hideLoading()
-                    uni.showToast({
-                        title: '操作失败',
-                        icon: 'none',
-                        duration: 1500
-                    })
                 }
-            } catch (e) {
-                uni.hideLoading()
-                uni.showToast({
-                    title: '操作失败',
-                    icon: 'none',
-                    duration: 1500
-                })
-                console.log('e', e)
             }
+
+        },
+        mounted(){
+            this.getCompanyAgentUser();
         }
-    }
+    };
+
+
 
 
 

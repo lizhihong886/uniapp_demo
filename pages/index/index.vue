@@ -32,7 +32,14 @@
 			}
 		},
         //   生命周期处理
-        
+		onPullDownRefresh() {
+			uni.startPullDownRefresh();
+
+			this.getData()
+			setTimeout(function () {
+				uni.stopPullDownRefresh();
+			}, 1500);
+		},
 		methods: {
 			listToBottom: function(event){
 				console.log('列表触底')
@@ -40,6 +47,7 @@
                 this.getData()
 			},
             getData: async function(){
+				console.log("getData")
                 const params = {
                 "svr_name": "AD.AdGoodsMngSvr",
                 "method_name": "GetGoodsListH5",

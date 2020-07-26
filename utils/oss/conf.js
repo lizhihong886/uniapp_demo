@@ -11,8 +11,6 @@ export const ossHost = 'https://yunhu-alpha-ad-oss.oss-cn-shenzhen.aliyuncs.com'
 
 export function getOssSecret (accesskey) {
     const policyBase64=  base64.encode(JSON.stringify(policyText))
-    console.log("policyBase64",policyBase64)
-    console.log(" CryptoJS.enc.Base64.stringify(policyText)", CryptoJS.enc.Base64.stringify(policyText))
     const message = policyBase64
     const bytes = CryptoJS.HmacSHA1(message, accesskey, { asBytes: true }) ;
     const  signature =  CryptoJS.enc.Base64.stringify(bytes);
